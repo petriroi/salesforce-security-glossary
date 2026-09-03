@@ -25,14 +25,14 @@
 - **When it matters:** SSO/SAML config, session security, and Lightning features all assume My Domain is enabled.
 
 ### Connected App
-- **Salesforce meaning:** A framework object that defines how an external application integrates with Salesforce via OAuth/SAML — including scopes, IP policies, and refresh-token behavior. Being superseded by **External Client Apps**.
+- **Salesforce meaning:** A framework object that defines how an external application integrates with Salesforce via OAuth/SAML — including scopes, IP policies, and refresh-token behavior. **New creation is being locked down:** Winter '26 disabled Connected App creation via the UI by default for new orgs; Spring '26 disabled creation across **all** orgs (new and existing) unless Salesforce Support grants an explicit exception, and that exception path is expected to be removed entirely in a future release. **Existing Connected Apps keep functioning** — edit, deploy, and delete are unaffected; only *new creation* is blocked.
 - **NOT:** A generic "app that is connected to the internet," a mobile app install, or an AppExchange managed package — a Connected App is specifically the OAuth/API integration and trust boundary.
-- **When it matters:** Any API integration, OAuth setup, or third-party tool authorization.
+- **When it matters:** Any new integration work should default to **External Client Apps** — creating a new Connected App now requires a Salesforce Support exception. Existing Connected App integrations need no change.
 
 ### External Client App
 - **Salesforce meaning:** The newer, packageable replacement for Connected Apps — separates the app's *definition* from its *policies* for better lifecycle and second-generation packaging support.
 - **NOT:** An app running outside the corporate firewall.
-- **When it matters:** New integrations built in 2024+ should default here rather than legacy Connected Apps.
+- **When it matters:** The default for all new integration work — as of Spring '26, creating a new Connected App requires a Salesforce Support exception, so ECAs are effectively the only unrestricted path for new builds.
 
 ### Named Credential
 - **Salesforce meaning:** A named, admin-managed definition of an external endpoint URL *plus* its authentication (OAuth, JWT, mutual TLS, etc.), referenced by Apex/Flow so secrets never appear in code.
@@ -86,7 +86,7 @@
 - **When it matters:** The one mechanism for subtraction in an otherwise additive permission model.
 
 ### OWD (Org-Wide Defaults)
-- **Salesforce meaning:** The baseline record-level access for each object (Private / Public Read Only / Public Read/Write / Controlled by Parent) — the *most restrictive* setting, opened up by sharing.
+- **Salesforce meaning:** The baseline record-level access for each object (Private / Public Read Only / Public Read/Write / Public Read/Write/Transfer (Lead and Case only) / Controlled by Parent) — the *most restrictive* setting, opened up by sharing.
 - **NOT:** Global org preferences or default field values.
 - **When it matters:** The foundation of the sharing model. "Set OWD to Private" is a data-isolation decision.
 
@@ -127,9 +127,9 @@
 *Protecting data at rest, in transit, and in use.*
 
 ### Shield Platform Encryption
-- **Salesforce meaning:** A premium (Shield) feature encrypting data at rest at the field/file level while preserving key platform functionality, with customer-controlled key material.
+- **Salesforce meaning:** A premium (Shield) feature encrypting data at rest at the field/file level while preserving key platform functionality. **By default, Salesforce manages the tenant secret** via the Key Management app (you can generate/rotate it, but the underlying key material is Salesforce-managed). *Customer-held* key material applies only when you opt into **BYOK** (you supply the key material) or **Cache-Only Keys** (the key is held externally and fetched on demand). Do not assume customer-controlled keys are the default.
 - **NOT:** TLS/in-transit encryption, or Classic Encrypted Text fields.
-- **When it matters:** Compliance-driven encryption; has functional trade-offs (some SOQL/reporting limits).
+- **When it matters:** Compliance-driven encryption; has functional trade-offs (some SOQL/reporting limits). Whether the customer controls the key depends on BYOK/Cache-Only opt-in, not the base feature.
 
 ### Deterministic vs. Probabilistic Encryption
 - **Salesforce meaning:** **Deterministic** encryption yields the same ciphertext for the same plaintext (allows exact-match filtering); **Probabilistic** yields different ciphertext each time (stronger, but not filterable).
@@ -141,8 +141,8 @@
 - **NOT:** Client-side encryption or a password vault.
 - **When it matters:** Regulatory requirements for customer-held key custody.
 
-### Data Mask
-- **Salesforce meaning:** A managed package that anonymizes/obfuscates sensitive data *in sandboxes* (not production).
+### Data Mask (Data Mask & Seed)
+- **Salesforce meaning:** **Data Mask & Seed** — a Core application (no package install required, available since Summer '26) that anonymizes/obfuscates sensitive data *in sandboxes* (not production), and now adds proactive PII detection, clearer error messages, data-integrity-preserving masking, and integrated seeding (including Data Cloud and AI seeding). The older **Data Mask managed package** still exists in some orgs but is deprecated: support ended July 9, 2026 and it becomes read-only December 31, 2026 — new work should use Data Mask & Seed.
 - **NOT:** UI field masking (`****`) or FLS.
 - **When it matters:** Preventing real PII from leaking into dev/test environments.
 
@@ -168,14 +168,18 @@
 - **When it matters:** Any dynamic query built from user input.
 
 ### `with sharing` / `without sharing` / `inherited sharing`
-- **Salesforce meaning:** Apex class keywords controlling whether the running user's sharing rules (record access) are enforced. `inherited sharing` adopts the caller's context and is the secure default for reusable classes.
+- **Salesforce meaning:** Apex class keywords controlling whether the running user's sharing rules (record access) are enforced. Precise rules:
+  - **`with sharing`** — enforces the running user's sharing rules.
+  - **`without sharing`** — ignores sharing (runs in system context for record access).
+  - **`inherited sharing`** — when the class is *called from another Apex class*, it runs in that caller's sharing mode; when *invoked directly* as the entry point (e.g., Aura/LWC `@AuraEnabled`, REST, Visualforce controller, batch), it **defaults to `without sharing`**. It is the secure default for reusable classes because it doesn't force a mode on its callers.
+  - **No keyword at all** — the class **inherits the sharing mode of its calling class**; if there is no calling class (it's the entry point), it defaults to **`without sharing`**. This is the trap: an entry-point class with no keyword runs without sharing enforcement.
 - **NOT:** File-sharing settings or code visibility modifiers.
-- **When it matters:** Omitting the keyword can silently run `without sharing`-like behavior in some entry points, bypassing record security.
+- **When it matters:** An entry-point Apex class with no sharing keyword bypasses record-level security. Declare `with sharing` (or `inherited sharing` for reusable library classes) explicitly; never rely on the default.
 
 ### USER_MODE / SECURITY_ENFORCED / stripInaccessible
-- **Salesforce meaning:** Enforcement mechanisms for CRUD/FLS in Apex: `WITH USER_MODE` (modern, on DML and SOQL), `WITH SECURITY_ENFORCED` (SOQL only), and `Security.stripInaccessible()` (removes fields the user can't access).
+- **Salesforce meaning:** Enforcement mechanisms for CRUD/FLS in Apex: `WITH USER_MODE` (enforces CRUD/FLS *and* sharing on both SOQL **and** DML), `WITH SECURITY_ENFORCED` (SOQL-only, no DML coverage), and `Security.stripInaccessible()` (removes fields the user can't access before DML/serialization). **As of Summer '26, `USER_MODE` became the standard/default mode for Apex database operations** (replacing system mode as the default) and is the clearly recommended choice; `WITH SECURITY_ENFORCED` is still functional but discouraged (no formal deprecation announced — new code should not use it).
 - **NOT:** OS user modes or database roles.
-- **When it matters:** By default, Apex runs in *system mode* and ignores CRUD/FLS — these keywords are how you enforce it.
+- **When it matters:** Historically Apex ran in *system mode* and ignored CRUD/FLS; from Summer '26 the default is user mode, but explicit `WITH USER_MODE` is still best practice for clarity. Use `WITH USER_MODE`, not `WITH SECURITY_ENFORCED`, in new code. Related: **Apex classes now respect sharing by default going forward, while triggers still default to `without sharing` behavior unless declared explicitly** — see the `with sharing` entry.
 
 ### Lightning Locker / Lightning Web Security (LWS)
 - **Salesforce meaning:** Client-side JavaScript sandboxing that isolates components from each other and the DOM. **LWS** is the newer, less restrictive successor to **Locker Service**.
@@ -185,7 +189,7 @@
 ### Guest User
 - **Salesforce meaning:** The unauthenticated user context for public Experience Cloud sites — a well-known source of over-permissioning and data exposure.
 - **NOT:** A temporary trial account or an anonymous DB connection.
-- **When it matters:** Guest user access is a top security-review target; OWD and sharing for guests must be locked down.
+- **When it matters:** Guest user access is a top security-review target. Beyond OWD and sharing, a large share of real-world guest exposure comes from **over-permissioned Guest User License / Profile object & field access** (CRUD/FLS granted to the guest profile). A proper guest security review checks **both** layers — record access (OWD/sharing) *and* object/field permissions on the guest profile.
 
 ---
 

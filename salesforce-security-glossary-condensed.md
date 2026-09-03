@@ -27,7 +27,7 @@
 - **CRUD** — object-level Create/Read/Update/Delete permission layer; **NOT** just generic DB verbs.
 
 ## Data Security, Privacy & Encryption
-- **Shield Platform Encryption** — field/file encryption at rest with customer keys; **NOT** TLS/in-transit or Classic encrypted text.
+- **Shield Platform Encryption** — field/file encryption at rest; tenant secret is Salesforce-managed by default (customer-held keys only via BYOK/Cache-Only); **NOT** TLS/in-transit or Classic encrypted text.
 - **Deterministic vs. Probabilistic Encryption** — deterministic is filterable (same ciphertext), probabilistic is stronger but not; **NOT** a generic strength rating.
 - **BYOK / Cache-Only Keys** — customer-supplied / externally-held key material; **NOT** client-side encryption or a password vault.
 - **Data Mask** — anonymizes data *in sandboxes*; **NOT** UI masking or FLS.
@@ -37,7 +37,7 @@
 ## Secure Development
 - **SOQL Injection** — injection into dynamic SOQL; **NOT** SQL injection (SOQL is its own language).
 - **with / without / inherited sharing** — Apex keywords for record-access enforcement (`inherited` = secure default); **NOT** file-sharing or code visibility.
-- **USER_MODE / SECURITY_ENFORCED / stripInaccessible** — enforce CRUD/FLS in Apex (default is system mode, which ignores them); **NOT** OS user modes.
+- **USER_MODE / SECURITY_ENFORCED / stripInaccessible** — enforce CRUD/FLS in Apex (default is system mode, which ignores them); prefer `WITH USER_MODE` (SOQL+DML); `WITH SECURITY_ENFORCED` is legacy/SOQL-only; **NOT** OS user modes.
 - **Lightning Locker / Lightning Web Security** — client-side JS sandboxing (LWS is the newer successor); **NOT** a password manager or account lockout.
 - **Guest User** — unauthenticated Experience Cloud context; a top over-permissioning risk; **NOT** a trial account or anonymous DB connection.
 
