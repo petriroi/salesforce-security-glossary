@@ -5,8 +5,8 @@
 ## Identity & Access Management
 - **Org** — a customer's Salesforce environment/tenant; **NOT** an "organization"/company.
 - **My Domain** — customer login subdomain (`acme.my.salesforce.com`) required for SSO/modern features; **NOT** a DNS or AD domain.
-- **Connected App** — OAuth/SAML integration config (scopes, IP, policies); **NOT** a generic or AppExchange app.
-- **External Client App** — packageable successor to Connected Apps; **NOT** an app running outside the firewall.
+- **Connected App** — OAuth/SAML integration config (scopes, IP, policies); new creation locked down as of Spring '26 (Support exception required), existing apps unaffected; **NOT** a generic or AppExchange app.
+- **External Client App** — packageable successor to Connected Apps and the default for new integrations (Connected App creation now requires a Support exception); **NOT** an app running outside the firewall.
 - **Named Credential** — admin-managed endpoint URL + auth, so secrets stay out of code; **NOT** a saved username/password.
 - **MFA** — contractually required second factor for all logins; **NOT** optional or SMS-only.
 - **High Assurance Session / Step-Up Auth** — stronger per-action session level (e.g., MFA before a sensitive action); **NOT** just login MFA.
@@ -30,14 +30,14 @@
 - **Shield Platform Encryption** — field/file encryption at rest; tenant secret is Salesforce-managed by default (customer-held keys only via BYOK/Cache-Only); **NOT** TLS/in-transit or Classic encrypted text.
 - **Deterministic vs. Probabilistic Encryption** — deterministic is filterable (same ciphertext), probabilistic is stronger but not; **NOT** a generic strength rating.
 - **BYOK / Cache-Only Keys** — customer-supplied / externally-held key material; **NOT** client-side encryption or a password vault.
-- **Data Mask** — anonymizes data *in sandboxes*; **NOT** UI masking or FLS.
+- **Data Mask (Data Mask & Seed)** — Core app (Summer '26) that anonymizes data *in sandboxes* + PII detection/seeding; legacy managed package deprecated; **NOT** UI masking or FLS.
 - **Data Classification / Compliance Categorization** — field metadata tagging sensitivity/ownership; **NOT** data typing or ML classification.
 - **Field Audit Trail** — long-term (≤10yr) field *history* retention; **NOT** Setup Audit Trail or Event Monitoring.
 
 ## Secure Development
 - **SOQL Injection** — injection into dynamic SOQL; **NOT** SQL injection (SOQL is its own language).
 - **with / without / inherited sharing** — Apex keywords for record-access enforcement (`inherited` = secure default); **NOT** file-sharing or code visibility.
-- **USER_MODE / SECURITY_ENFORCED / stripInaccessible** — enforce CRUD/FLS in Apex (default is system mode, which ignores them); prefer `WITH USER_MODE` (SOQL+DML); `WITH SECURITY_ENFORCED` is legacy/SOQL-only; **NOT** OS user modes.
+- **USER_MODE / SECURITY_ENFORCED / stripInaccessible** — enforce CRUD/FLS in Apex; `USER_MODE` is the default as of Summer '26 (SOQL+DML) and recommended; `WITH SECURITY_ENFORCED` is SOQL-only and discouraged; **NOT** OS user modes. (Classes respect sharing by default going forward; triggers still default to `without sharing` unless declared.)
 - **Lightning Locker / Lightning Web Security** — client-side JS sandboxing (LWS is the newer successor); **NOT** a password manager or account lockout.
 - **Guest User** — unauthenticated Experience Cloud context; a top over-permissioning risk; **NOT** a trial account or anonymous DB connection.
 
