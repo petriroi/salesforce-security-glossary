@@ -73,4 +73,4 @@ Corrections and additional terms welcome — open an issue or PR. Keep the entry
 
 ## License
 
-No license specified yet. Add one (e.g., MIT or CC-BY-4.0) if you intend others to reuse it.
+Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) — © 2026 Petri Roine. You may share and adapt this material for any purpose, including commercially, provided you give appropriate credit.
